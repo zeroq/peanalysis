@@ -123,6 +123,7 @@ KERNEL32.dll
 *	 ForwarderChain: 0 (0x0)
 *	 Name: 30496 (0x7720)
 *	 First Thunk: 28688 (0x7010)
+
 ADVAPI32.dll
 *	 Original First Thunk: 30016 (0x7540)
 *	 TimeDateStamp: 0
