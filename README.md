@@ -3,22 +3,22 @@ peanalysis
 
 Python script to parse PE header information. Sample output:
 
-found MZ header:
-	 bytes of last page: 144
-	 pages in file: 3
-	 number of relocations: 0
-	 msdos header size: 64
-	 minimum paragraphs: 0
-	 maximum paragraphs: 65535
-	 stack-segment modul: 0
-	 SP register: 184
-	 checksumme: 0
-	 IP register: 0
-	 code modul: 0
-	 offset first relocation: 64
-	 overlay number: 0
-	 PE header offset: 216
-found PE header (size: 20)
+### found MZ header:
+*	 bytes of last page: 144
+*	 pages in file: 3
+*	 number of relocations: 0
+*	 msdos header size: 64
+*	 minimum paragraphs: 0
+*	 maximum paragraphs: 65535
+*	 stack-segment modul: 0
+*	 SP register: 184
+*	 checksumme: 0
+*	 IP register: 0
+*	 code modul: 0
+*	 offset first relocation: 64
+*	 overlay number: 0
+*	 PE header offset: 216
+### found PE header (size: 20)
 	 machine: i386
 	 number of sections: 4
 	 timedatestamp: 1343616786 (Mon Jul 30 04:53:06 2012)
@@ -26,7 +26,7 @@ found PE header (size: 20)
 	 number of symbols: 0 (0x0)
 	 size of optional header: 224
 	 characteristics: 0b100001111 (0x10f) (11)
-found PE optional header (size: 224)
+### found PE optional header (size: 224)
 	 Magic Number: PE32
 		 Magic: 0x10b
 	 major linker version: 6
