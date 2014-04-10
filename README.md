@@ -3,7 +3,7 @@ peanalysis
 
 Python script to parse PE header information. Sample output:
 
-### found MZ header:
+found MZ header:
 *	 bytes of last page: 144
 *	 pages in file: 3
 *	 number of relocations: 0
@@ -18,51 +18,54 @@ Python script to parse PE header information. Sample output:
 *	 offset first relocation: 64
 *	 overlay number: 0
 *	 PE header offset: 216
-### found PE header (size: 20)
-	 machine: i386
-	 number of sections: 4
-	 timedatestamp: 1343616786 (Mon Jul 30 04:53:06 2012)
-	 pointer to symbol table: 0 (0x0)
-	 number of symbols: 0 (0x0)
-	 size of optional header: 224
-	 characteristics: 0b100001111 (0x10f) (11)
-### found PE optional header (size: 224)
-	 Magic Number: PE32
-		 Magic: 0x10b
-	 major linker version: 6
-	 minor linker version: 0
-	 size of code: 24576
-	 size of initialized data: 45056
-	 size of uninitialized data: 0
-	 code entry point: 6576 (execution starts here)
-	 base of code: 4096
-	 base of data: 28672
-	 image base: 4194304 (0x400000)
-		 default for applications
-	 section alignment: 4096
-	 file alignment: 4096
-	 MajorOperatingSystemVersion: 4
-	 MinorOperatingSystemVersion: 0
-	 MajorImageVersion: 0
-	 MinorImageVersion: 0
-	 MajorSubSystemVersion: 4 (0x4)
-	 MinorSubSystemVersion: 0 (0x0)
-	 Win32VersionValue: 0
-	 size of image (memory): 73728
-	 size of headers (offset to first section raw data): 4096
-	 checksum (for drivers): 0
-	 subsystem: 2
-		 win32 graphical binary
-	 DllCharacteristics: 0
-	 SizeOfStackReserve: 1048576
-	 SizeOfStackCommit: 4096
-	 SizeOfHeapReserve: 1048576
-	 SizeOfHeapCommit: 4096
-	 LoaderFlags: 0 (0x0)
-	 NumberOfRvaAndSizes: 16 (0x10)
-		Name: Import symbols table RVA: 29956 (0x7504) Size: 60
-		Name: Resource table RVA: 49152 (0xc000) Size: 21600
-		Name: Import address table RVA: 28672 (0x7000) Size: 244
+
+found PE header (size: 20)
+*	 machine: i386
+*	 number of sections: 4
+*	 timedatestamp: 1343616786 (Mon Jul 30 04:53:06 2012)
+*	 pointer to symbol table: 0 (0x0)
+*	 number of symbols: 0 (0x0)
+*	 size of optional header: 224
+*	 characteristics: 0b100001111 (0x10f) (11)
+
+found PE optional header (size: 224)
+*	 Magic Number: PE32
+**		 Magic: 0x10b
+*	 major linker version: 6
+*	 minor linker version: 0
+*	 size of code: 24576
+*	 size of initialized data: 45056
+*	 size of uninitialized data: 0
+*	 code entry point: 6576 (execution starts here)
+*	 base of code: 4096
+*	 base of data: 28672
+*	 image base: 4194304 (0x400000)
+**		 default for applications
+*	 section alignment: 4096
+*	 file alignment: 4096
+*	 MajorOperatingSystemVersion: 4
+*	 MinorOperatingSystemVersion: 0
+*	 MajorImageVersion: 0
+*	 MinorImageVersion: 0
+*	 MajorSubSystemVersion: 4 (0x4)
+*	 MinorSubSystemVersion: 0 (0x0)
+*	 Win32VersionValue: 0
+*	 size of image (memory): 73728
+*	 size of headers (offset to first section raw data): 4096
+*	 checksum (for drivers): 0
+*	 subsystem: 2
+**		 win32 graphical binary
+*	 DllCharacteristics: 0
+*	 SizeOfStackReserve: 1048576
+*	 SizeOfStackCommit: 4096
+*	 SizeOfHeapReserve: 1048576
+*	 SizeOfHeapCommit: 4096
+*	 LoaderFlags: 0 (0x0)
+*	 NumberOfRvaAndSizes: 16 (0x10)
+**		Name: Import symbols table RVA: 29956 (0x7504) Size: 60
+**		Name: Resource table RVA: 49152 (0xc000) Size: 21600
+**		Name: Import address table RVA: 28672 (0x7000) Size: 244
+
 found section name: .text
 	 PhysicalAddress: 23404 (0x5b6c)
 	 VirtualSize: 23404 (0x5b6c)
