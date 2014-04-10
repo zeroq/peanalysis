@@ -30,7 +30,7 @@ found PE header (size: 20)
 
 found PE optional header (size: 224)
 *	 Magic Number: PE32
-**		 Magic: 0x10b
+  *		 Magic: 0x10b
 *	 major linker version: 6
 *	 minor linker version: 0
 *	 size of code: 24576
@@ -40,7 +40,7 @@ found PE optional header (size: 224)
 *	 base of code: 4096
 *	 base of data: 28672
 *	 image base: 4194304 (0x400000)
-**		 default for applications
+  *		 default for applications
 *	 section alignment: 4096
 *	 file alignment: 4096
 *	 MajorOperatingSystemVersion: 4
@@ -54,7 +54,7 @@ found PE optional header (size: 224)
 *	 size of headers (offset to first section raw data): 4096
 *	 checksum (for drivers): 0
 *	 subsystem: 2
-**		 win32 graphical binary
+  *		 win32 graphical binary
 *	 DllCharacteristics: 0
 *	 SizeOfStackReserve: 1048576
 *	 SizeOfStackCommit: 4096
@@ -62,9 +62,9 @@ found PE optional header (size: 224)
 *	 SizeOfHeapCommit: 4096
 *	 LoaderFlags: 0 (0x0)
 *	 NumberOfRvaAndSizes: 16 (0x10)
-*  *		Name: Import symbols table RVA: 29956 (0x7504) Size: 60
-*  *		Name: Resource table RVA: 49152 (0xc000) Size: 21600
-*  *		Name: Import address table RVA: 28672 (0x7000) Size: 244
+  * 		Name: Import symbols table RVA: 29956 (0x7504) Size: 60
+  * 		Name: Resource table RVA: 49152 (0xc000) Size: 21600
+  * 		Name: Import address table RVA: 28672 (0x7000) Size: 244
 
 found section name: .text
 	 PhysicalAddress: 23404 (0x5b6c)
