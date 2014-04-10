@@ -62,9 +62,9 @@ found PE optional header (size: 224)
 *	 SizeOfHeapCommit: 4096
 *	 LoaderFlags: 0 (0x0)
 *	 NumberOfRvaAndSizes: 16 (0x10)
-**		Name: Import symbols table RVA: 29956 (0x7504) Size: 60
-**		Name: Resource table RVA: 49152 (0xc000) Size: 21600
-**		Name: Import address table RVA: 28672 (0x7000) Size: 244
+*  *		Name: Import symbols table RVA: 29956 (0x7504) Size: 60
+*  *		Name: Resource table RVA: 49152 (0xc000) Size: 21600
+*  *		Name: Import address table RVA: 28672 (0x7000) Size: 244
 
 found section name: .text
 	 PhysicalAddress: 23404 (0x5b6c)
