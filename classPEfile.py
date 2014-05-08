@@ -184,11 +184,11 @@ class pefile:
 						self.exportSymbolDict[counter]['NameDLL'] = 'Unknown'
 					break
 			else:
-				print("\t unable to determine correct section")
+				#print("\t unable to determine correct section")
 				self.exportSymbolDict = {}
 		else:
-			print("Exported Symbols:")
-			print("\t no export symbols available")
+			#print("Exported Symbols:")
+			#print("\t no export symbols available")
 			self.exportSymbolDict = {}
 
 	def readImportSymbols(self):
@@ -237,19 +237,20 @@ class pefile:
 					beginIndex += 20
 					counter += 1
 			else:
-				print("\t unable to determine correct section")
+				#print("\t unable to determine correct section")
 				self.importSymbolDict = {}
 		else:
-			print("\t no import symbols available")
+			#print("\t no import symbols available")
 			self.importSymbolDict = {}
 
 	def getImportedFunctions(self, retVal=False):
-		print
-		print "Imported Functions:"
-		print
 		if retVal:
 			dllDict = {}
 			currDLL = ""
+		else:
+			print
+			print "Imported Functions:"
+			print
 
 		for item in self.importSymbolDict:
 			index = None
@@ -258,10 +259,11 @@ class pefile:
 			elif self.importSymbolDict[item]['FirstThunk']!=0:
 				index = self.importSymbolDict[item]['FirstThunk'] - self.sectionDict[self.importSymbolDict[item]['sectionID']]['virtualaddress']
 			if index!=None:
-				print("%s" % (self.importSymbolDict[item]['NameDLL']))
 				if retVal:
 					currDLL = self.importSymbolDict[item]['NameDLL']
 					dllDict[currDLL] = []
+				else:
+					print("%s" % (self.importSymbolDict[item]['NameDLL']))
 				while True:
 					if [self.secionDataDict[self.importSymbolDict[item]['sectionID']][index:index+4]] == ['']:
 						break
@@ -269,9 +271,10 @@ class pefile:
 					if fRVA==0:
 						break
 					if hex(fRVA).startswith('0x8000'):
-						print("\t\t load by ordinal")
 						if retVal:
-							dllDict[currDLL].append("Ordinal: %s" % (fRVA))
+							dllDict[currDLL].append("Ordinal: %s" % (int(hex(fRVA), 16) ^ int('0x80000000', 16)))
+						else:
+							print("\t\t load by ordinal: %s" % (int(hex(fRVA), 16) ^ int('0x80000000', 16)))
 					else:
 						try:
 							nindex = fRVA - self.sectionDict[self.importSymbolDict[item]['sectionID']]['virtualaddress']
@@ -283,12 +286,16 @@ class pefile:
 									break
 								funcName += struct.unpack('c', self.secionDataDict[self.importSymbolDict[item]['sectionID']][nindex])[0]
 								nindex += 1
-							print("\t\t Function: %s" % (funcName))
 							if retVal:
 								dllDict[currDLL].append(funcName)
+							else:
+								print("\t\t Function: %s" % (funcName))
 						except struct.error:
-							print("\t\t no name found")
+							if not retVal:
+								print("\t\t no name found")
 					index += 4
+		if retVal:
+			return dllDict
 
 	def printImportedDLLs(self, item=None):
 		if item==None:
@@ -308,26 +315,26 @@ class pefile:
 			print("\t First Thunk: %s (%s)" % (self.importSymbolDict[item]['FirstThunk'], hex(self.importSymbolDict[item]['FirstThunk'])))
 
 	def getExportedFunctions(self, retVal=False):
-		if not retVal:
-			print
-			print "Exported Functions:"
-			print
 		if retVal:
 			dllDict = {}
 			currDLL = ""
+		else:
+			print
+			print "Exported Functions:"
+			print
 		for item in self.exportSymbolDict:
 			index = None
 			if self.exportSymbolDict[item]['AddressOfNames']!=0:
 				index = self.exportSymbolDict[item]['AddressOfNames'] - self.sectionDict[self.exportSymbolDict[item]['sectionID']]['virtualaddress']
 			if index!=None:
-				if not retVal:
+				if retVal:
+					currDLL = self.exportSymbolDict[item]['NameDLL']
+					dllDict[currDLL] = []
+				else:
 					print("- %s" % (self.exportSymbolDict[item]['NameDLL']))
 					#print("- %s" % (self.exportSymbolDict[item]['AddressOfNames']))
 					#print("- %s" % (self.exportSymbolDict[item]['AddressOfFunctions']))
 					#print
-				if retVal:
-					currDLL = self.exportSymbolDict[item]['NameDLL']
-					dllDict[currDLL] = []
 				numNames = 0
 				while numNames<self.exportSymbolDict[item]['numberOfNames']:
 					if [self.secionDataDict[self.exportSymbolDict[item]['sectionID']][index:index+4]] == ['']:
@@ -336,10 +343,10 @@ class pefile:
 					if fRVA==0:
 						break
 					if hex(fRVA).startswith('0x8000'):
-						if not retVal:
-							print("\t\t load by ordinal")
 						if retVal:
-							dllDict[currDLL].append("Ordinal: %s" % (fRVA))
+							dllDict[currDLL].append("Ordinal: %s" % (int(hex(fRVA), 16) ^ int('0x80000000', 16)))
+						else:
+							print("\t\t load by ordinal: %s" % (int(hex(fRVA), 16) ^ int('0x80000000', 16)))
 					else:
 						try:
 							nindex = fRVA - self.sectionDict[self.exportSymbolDict[item]['sectionID']]['virtualaddress']
@@ -350,12 +357,13 @@ class pefile:
 									break
 								funcName += struct.unpack('c', self.secionDataDict[self.exportSymbolDict[item]['sectionID']][nindex])[0]
 								nindex += 1
-							if not retVal:
-								print("\t\t Function: %s" % (funcName))
 							if retVal:
 								dllDict[currDLL].append(funcName)
+							else:
+								print("\t\t Function: %s" % (funcName))
 						except struct.error:
-							print("\t\t no name found")
+							if not retVal:
+								print("\t\t no name found")
 					index += 4
 					numNames += 1
 		if retVal:

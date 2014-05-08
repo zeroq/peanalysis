@@ -33,26 +33,25 @@ import classPEfile
 ############################################################################
 
 if __name__ == '__main__':
-	try:
-		fn = sys.argv[1]
-	except:
-		print("missing file to analyse")
-		sys.exit(255)
-	print("reading from %s ..." % (fn))
-	print
+    try:
+        fn = sys.argv[1]
+    except:
+        print("missing file to analyse")
+        sys.exit(255)
+    print("reading from %s ..." % (fn))
+    print
 
-	t = classPEfile.pefile(fn)
+    t = classPEfile.pefile(fn)
 
-	t.printMSDOSHeader()
-	t.printPEHeader()
-	t.printPEOptHeader()
-	t.printSectionHeader()
+    t.printMSDOSHeader()
+    t.printPEHeader()
+    t.printPEOptHeader()
+    t.printSectionHeader()
 
-	t.readExportSymbols()
-	t.readImportSymbols()
+    t.readExportSymbols()
+    t.readImportSymbols()
 
-	t.printImportedDLLs()
-	t.getImportedFunctions()
-	r = t.getExportedFunctions(True)
-	print r
-	t.printResourceInformation()
+    t.printImportedDLLs()
+    t.getImportedFunctions()
+    t.getExportedFunctions()
+    t.printResourceInformation()
