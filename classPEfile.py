@@ -27,6 +27,7 @@ import time
 
 class pefile:
 	def __init__(self, fn, content=None):
+		self.isPEfile = False
 		if fn!=None:
 			self.filename = fn
 			self.filecontent = None
@@ -92,6 +93,7 @@ class pefile:
 
 		try:
 			PESignature = self.filecontent[self.msdosDict['15_pPEHeader']:self.msdosDict['15_pPEHeader']+4]
+			self.isPEfile = True
 		except:
 			print("no PE file!")
 		else:
@@ -786,7 +788,7 @@ class pefile:
 		else:
 			print("  %s" % ([szKey[0:8]]))
 		print('  character set:')
-		if szKey[8:] == '0\x004\x00B\x000\x00':
+		if szKey[8:] == '0\x004\x00B\x000\x00' or szKey[8:] == '0\x004\x00b\x000\x00':
 			print("\t unicode")
 		else:
 			print("  %s" % ([szKey[8:]]))
@@ -799,8 +801,10 @@ class pefile:
 			index += 1
 		wLength = entry[index:index+2]
 		#print("    string entry length: %s" % (struct.unpack('H', wLength)[0]))
-		wValueLength = entry[index+2:index+4]
+		wValueLength = struct.unpack('H', entry[index+2:index+4])[0]
+		#print("Value Length: %s" % ([wValueLength]))
 		wType = entry[index+4:index+6]
+		#print("wType: %s" % ([wType]))
 		unicodeString = ""
 		position = index + 6
 		while entry[position] != '\x00' or entry[position+1] != '\x00':
@@ -812,14 +816,15 @@ class pefile:
 		while entry[index] == '\x00':
 			index += 1
 		value = ""
-		try:
-			while entry[index] != '\x00' or entry[index+1] != '\x00':
-				value += entry[index]
-				index += 1
-		except IndexError as e:
-			pass
+		if wValueLength > 0:
+			try:
+				while entry[index] != '\x00' or entry[index+1] != '\x00':
+					value += entry[index]
+					index += 1
+			except IndexError as e:
+				pass
 		#print("    %s" % (value))
-		print("    %s: %s" % (unicodeString, value ))
+		print("  %s: %s" % (unicodeString, value ))
 		if len(entry[index:])>10:
 			self.childString(entry[index:])
 		return
