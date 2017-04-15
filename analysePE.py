@@ -27,22 +27,16 @@ __version__ = "0.1"
 import sys
 import struct
 import time
+import os
 
 import classPEfile
 
 ############################################################################
 
-if __name__ == '__main__':
-    try:
-        fn = sys.argv[1]
-    except:
-        print("missing file to analyse")
-        sys.exit(255)
-    print("reading from %s ..." % (fn))
-    print
-
+def showFile(fn):
     t = classPEfile.pefile(fn)
-
+    if not t.isPEfile:
+        return
     t.printMSDOSHeader()
     t.printPEHeader()
     t.printPEOptHeader()
@@ -55,3 +49,24 @@ if __name__ == '__main__':
     t.getImportedFunctions()
     t.getExportedFunctions()
     t.printResourceInformation()
+
+    return
+
+############################################################################
+
+if __name__ == '__main__':
+    try:
+        fn = sys.argv[1]
+    except:
+        print("missing file/directory to analyse")
+        sys.exit(255)
+
+    if os.path.isfile(fn):
+        print("reading from %s ..." % (fn))
+        showFile(fn)
+    else:
+        for root, dirs, files in os.walk(fn):
+            for fl in files:
+                fn = os.path.join(root, fl)
+                print("reading from %s ..." % (fn))
+                showFile(fn)
