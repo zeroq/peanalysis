@@ -807,14 +807,19 @@ class pefile:
 		#print("wType: %s" % ([wType]))
 		unicodeString = ""
 		position = index + 6
-		while entry[position] != '\x00' or entry[position+1] != '\x00':
+		while entry[position] != '\x00' or (position+1 < len(entry) and entry[position+1] != '\x00'):
 			unicodeString += entry[position]
 			position += 1
+			if position >= len(entry):
+				break
 		#print("    %s %s" % (unicodeString, [unicodeString]))
 		index = position
 		### skip padding
-		while entry[index] == '\x00':
-			index += 1
+		if index < len(entry):
+			while entry[index] == '\x00':
+				index += 1
+				if index >= len(entry):
+					break
 		value = ""
 		if wValueLength > 0:
 			try:
@@ -830,7 +835,7 @@ class pefile:
 		return
 
 	def analyseVarFileInfo(self, datablock):
-		#print [datablock]
+		print [datablock]
 		pass
 
 
