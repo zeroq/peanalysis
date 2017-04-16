@@ -28,6 +28,7 @@ import time
 class pefile:
     def __init__(self, fn, content=None):
         self.isPEfile = False
+        self.is32bit = True
         if fn!=None:
             self.filename = fn
             self.filecontent = None
@@ -257,6 +258,13 @@ class pefile:
             print "Imported Functions:"
             print
 
+        if self.is32bit:
+            struct_unpack_fmt = 'I'
+            index_offset = 4
+        else:
+            struct_unpack_fmt = 'q'
+            index_offset = 8
+
         for item in self.importSymbolDict:
             index = None
             if self.importSymbolDict[item]['origFstThunk']!=0:
@@ -272,7 +280,7 @@ class pefile:
                 while True:
                     if [self.secionDataDict[self.importSymbolDict[item]['sectionID']][index:index+4]] == ['']:
                         break
-                    fRVA = struct.unpack('I', self.secionDataDict[self.importSymbolDict[item]['sectionID']][index:index+4])[0]
+                    fRVA = struct.unpack(struct_unpack_fmt, self.secionDataDict[self.importSymbolDict[item]['sectionID']][index:index+index_offset])[0]
                     if fRVA==0:
                         break
                     if hex(fRVA).startswith('0x8000'):
@@ -298,7 +306,7 @@ class pefile:
                         except struct.error:
                             if not retVal:
                                 print("\t\t no name found")
-                    index += 4
+                    index += index_offset
         if retVal:
             return dllDict
 
@@ -327,6 +335,7 @@ class pefile:
             print
             print "Exported Functions:"
             print
+
         for item in self.exportSymbolDict:
             index = None
             if self.exportSymbolDict[item]['AddressOfNames']!=0:
@@ -504,45 +513,86 @@ class pefile:
                 return result
             return result
 
+    def fillOptHeaderFields(self, peOptionalHeader):
+        last_index = 96
+        if self.is32bit:
+            self.peoptDict['02_majorlnkv'] = struct.unpack('b', peOptionalHeader[2])[0]
+            self.peoptDict['03_minorlnkv'] = struct.unpack('b', peOptionalHeader[3])[0]
+            self.peoptDict['04_codesize'] = struct.unpack('i', peOptionalHeader[4:8])[0]
+            self.peoptDict['05_initsize'] = struct.unpack('i', peOptionalHeader[8:12])[0]
+            self.peoptDict['06_uninitsize'] = struct.unpack('i', peOptionalHeader[12:16])[0]
+            self.peoptDict['07_entrypoint'] = struct.unpack('i', peOptionalHeader[16:20])[0]
+            self.peoptDict['08_baseofcode'] = struct.unpack('i', peOptionalHeader[20:24])[0]
+            self.peoptDict['09_baseofdata'] = struct.unpack('i', peOptionalHeader[24:28])[0]
+            self.peoptDict['10_imagebase'] = struct.unpack('i', peOptionalHeader[28:32])[0]
+            self.peoptDict['11_sectionalignment'] = struct.unpack('i', peOptionalHeader[32:36])[0]
+            self.peoptDict['12_filealignment'] = struct.unpack('I', peOptionalHeader[36:40])[0]
+            self.peoptDict['13_majorop'] = struct.unpack('h', peOptionalHeader[40:42])[0]
+            self.peoptDict['14_minorop'] = struct.unpack('h', peOptionalHeader[42:44])[0]
+            self.peoptDict['15_majorimage'] = struct.unpack('h', peOptionalHeader[44:46])[0]
+            self.peoptDict['16_minorimage'] = struct.unpack('h', peOptionalHeader[46:48])[0]
+            self.peoptDict['17_majorsubver'] = struct.unpack('h', peOptionalHeader[48:50])[0]
+            self.peoptDict['18_minorsubver'] = struct.unpack('h', peOptionalHeader[50:52])[0]
+            self.peoptDict['19_win32verval'] = struct.unpack('i', peOptionalHeader[52:56])[0]
+            self.peoptDict['20_sizeofimage'] = struct.unpack('i', peOptionalHeader[56:60])[0]
+            self.peoptDict['21_sizeofheaders'] = struct.unpack('i', peOptionalHeader[60:64])[0]
+            self.peoptDict['22_checksum'] = struct.unpack('i', peOptionalHeader[64:68])[0]
+            self.peoptDict['23_subsystem'] = struct.unpack('h', peOptionalHeader[68:70])[0]
+            self.peoptDict['24_DllCharacteristics'] = bin(int(hex(struct.unpack('h', peOptionalHeader[70:72])[0]), 16))[2:]
+            self.peoptDict['25_SizeOfStackReserve'] = struct.unpack('i', peOptionalHeader[72:76])[0]
+            self.peoptDict['26_SizeOfStackCommit'] = struct.unpack('i', peOptionalHeader[76:80])[0]
+            self.peoptDict['27_SizeOfHeapReserve'] = struct.unpack('i', peOptionalHeader[80:84])[0]
+            self.peoptDict['28_SizeOfHeapCommit'] = struct.unpack('i', peOptionalHeader[84:88])[0]
+            self.peoptDict['29_loaderflags'] = struct.unpack('I', peOptionalHeader[88:92])[0]
+            self.peoptDict['30_NumberOfRvaAndSizes'] = struct.unpack('I', peOptionalHeader[92:96])[0]
+            return last_index
+        else:
+            # 64bit binary
+            self.peoptDict['02_majorlnkv'] = struct.unpack('b', peOptionalHeader[2])[0]
+            self.peoptDict['03_minorlnkv'] = struct.unpack('b', peOptionalHeader[3])[0]
+            self.peoptDict['04_codesize'] = struct.unpack('i', peOptionalHeader[4:8])[0]
+            self.peoptDict['05_initsize'] = struct.unpack('i', peOptionalHeader[8:12])[0]
+            self.peoptDict['06_uninitsize'] = struct.unpack('i', peOptionalHeader[12:16])[0]
+            self.peoptDict['07_entrypoint'] = struct.unpack('i', peOptionalHeader[16:20])[0]
+            self.peoptDict['08_baseofcode'] = struct.unpack('i', peOptionalHeader[20:24])[0]
+            self.peoptDict['09_baseofdata'] = 0
+            self.peoptDict['10_imagebase'] = struct.unpack('q', peOptionalHeader[24:32])[0]
+            self.peoptDict['11_sectionalignment'] = struct.unpack('i', peOptionalHeader[32:36])[0]
+            self.peoptDict['12_filealignment'] = struct.unpack('I', peOptionalHeader[36:40])[0]
+            self.peoptDict['13_majorop'] = struct.unpack('h', peOptionalHeader[40:42])[0]
+            self.peoptDict['14_minorop'] = struct.unpack('h', peOptionalHeader[42:44])[0]
+            self.peoptDict['15_majorimage'] = struct.unpack('h', peOptionalHeader[44:46])[0]
+            self.peoptDict['16_minorimage'] = struct.unpack('h', peOptionalHeader[46:48])[0]
+            self.peoptDict['17_majorsubver'] = struct.unpack('h', peOptionalHeader[48:50])[0]
+            self.peoptDict['18_minorsubver'] = struct.unpack('h', peOptionalHeader[50:52])[0]
+            self.peoptDict['19_win32verval'] = struct.unpack('i', peOptionalHeader[52:56])[0]
+            self.peoptDict['20_sizeofimage'] = struct.unpack('i', peOptionalHeader[56:60])[0]
+            self.peoptDict['21_sizeofheaders'] = struct.unpack('i', peOptionalHeader[60:64])[0]
+            self.peoptDict['22_checksum'] = struct.unpack('i', peOptionalHeader[64:68])[0]
+            self.peoptDict['23_subsystem'] = struct.unpack('h', peOptionalHeader[68:70])[0]
+            self.peoptDict['24_DllCharacteristics'] = bin(int(hex(struct.unpack('h', peOptionalHeader[70:72])[0]), 16))[2:]
+            self.peoptDict['25_SizeOfStackReserve'] = struct.unpack('q', peOptionalHeader[72:80])[0]
+            self.peoptDict['26_SizeOfStackCommit'] = struct.unpack('q', peOptionalHeader[80:88])[0]
+            self.peoptDict['27_SizeOfHeapReserve'] = struct.unpack('q', peOptionalHeader[88:96])[0]
+            self.peoptDict['28_SizeOfHeapCommit'] = struct.unpack('q', peOptionalHeader[96:104])[0]
+            self.peoptDict['29_loaderflags'] = struct.unpack('I', peOptionalHeader[104:108])[0]
+            self.peoptDict['30_NumberOfRvaAndSizes'] = struct.unpack('I', peOptionalHeader[108:112])[0]
+            last_index = 112
+            return last_index
+
     def readPEOptHeader(self, peOptionalHeader):
         self.peoptDict['01_optionalHeaderMagic'] = peOptionalHeader[0:2]
         if self.peoptDict['01_optionalHeaderMagic']=='\x0b\x01':
             self.peoptDict['01_optionalHeaderMagic']='PE32'
+            self.is32bit = True
         elif self.peoptDict['01_optionalHeaderMagic']=='\x0b\x02':
             self.peoptDict['01_optionalHeaderMagic']='PE32+'
-        self.peoptDict['02_majorlnkv'] = struct.unpack('b', peOptionalHeader[2])[0]
-        self.peoptDict['03_minorlnkv'] = struct.unpack('b', peOptionalHeader[3])[0]
-        self.peoptDict['04_codesize'] = struct.unpack('i', peOptionalHeader[4:8])[0]
-        self.peoptDict['05_initsize'] = struct.unpack('i', peOptionalHeader[8:12])[0]
-        self.peoptDict['06_uninitsize'] = struct.unpack('i', peOptionalHeader[12:16])[0]
-        self.peoptDict['07_entrypoint'] = struct.unpack('i', peOptionalHeader[16:20])[0]
-        self.peoptDict['08_baseofcode'] = struct.unpack('i', peOptionalHeader[20:24])[0]
-        self.peoptDict['09_baseofdata'] = struct.unpack('i', peOptionalHeader[24:28])[0]
-        self.peoptDict['10_imagebase'] = struct.unpack('i', peOptionalHeader[28:32])[0]
-        self.peoptDict['11_sectionalignment'] = struct.unpack('i', peOptionalHeader[32:36])[0]
-        self.peoptDict['12_filealignment'] = struct.unpack('I', peOptionalHeader[36:40])[0]
-        self.peoptDict['13_majorop'] = struct.unpack('h', peOptionalHeader[40:42])[0]
-        self.peoptDict['14_minorop'] = struct.unpack('h', peOptionalHeader[42:44])[0]
-        self.peoptDict['15_majorimage'] = struct.unpack('h', peOptionalHeader[44:46])[0]
-        self.peoptDict['16_minorimage'] = struct.unpack('h', peOptionalHeader[46:48])[0]
-        self.peoptDict['17_majorsubver'] = struct.unpack('h', peOptionalHeader[48:50])[0]
-        self.peoptDict['18_minorsubver'] = struct.unpack('h', peOptionalHeader[50:52])[0]
-        self.peoptDict['19_win32verval'] = struct.unpack('i', peOptionalHeader[52:56])[0]
-        self.peoptDict['20_sizeofimage'] = struct.unpack('i', peOptionalHeader[56:60])[0]
-        self.peoptDict['21_sizeofheaders'] = struct.unpack('i', peOptionalHeader[60:64])[0]
-        self.peoptDict['22_checksum'] = struct.unpack('i', peOptionalHeader[64:68])[0]
-        self.peoptDict['23_subsystem'] = struct.unpack('h', peOptionalHeader[68:70])[0]
-        self.peoptDict['24_DllCharacteristics'] = bin(int(hex(struct.unpack('h', peOptionalHeader[70:72])[0]), 16))[2:]
-        self.peoptDict['25_SizeOfStackReserve'] = struct.unpack('i', peOptionalHeader[72:76])[0]
-        self.peoptDict['26_SizeOfStackCommit'] = struct.unpack('i', peOptionalHeader[76:80])[0]
-        self.peoptDict['27_SizeOfHeapReserve'] = struct.unpack('i', peOptionalHeader[80:84])[0]
-        self.peoptDict['28_SizeOfHeapCommit'] = struct.unpack('i', peOptionalHeader[84:88])[0]
-        self.peoptDict['29_loaderflags'] = struct.unpack('I', peOptionalHeader[88:92])[0]
-        self.peoptDict['30_NumberOfRvaAndSizes'] = struct.unpack('I', peOptionalHeader[92:96])[0]
+            self.is32bit = False # 64bit binary
 
+        last_index = self.fillOptHeaderFields(peOptionalHeader)
         self.peoptDict['31_imageDataDirectory'] = {}
-        init1 = 96
-        init2 = 100
+        init1 = last_index
+        init2 = last_index + 4
         resourceRVA = None
         #for i in range(0,  self.peoptDict['NumberOfRvaAndSizes']):
         for i in range(0,  16):
