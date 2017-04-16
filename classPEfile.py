@@ -116,6 +116,9 @@ class pefile:
 					self.secionDataDict[i] = self.filecontent[self.sectionDict[i]['ptorawdata']:self.sectionDict[i]['ptorawdata']+self.sectionDict[i]['sizeofrawdata']]
 					beginFirstSection += 40
 					endFirstSection += 40
+		if not self.peHeader:
+			print("PE Header is None")
+			self.isPEfile = False
 
 	def readFileContent(self):
 		fp = open(self.filename, 'rb')
@@ -274,9 +277,9 @@ class pefile:
 						break
 					if hex(fRVA).startswith('0x8000'):
 						if retVal:
-							dllDict[currDLL].append("Ordinal: %s" % (int(hex(fRVA), 16) ^ int('0x80000000', 16)))
+							dllDict[currDLL].append("Ordinal: %s" % (long(hex(fRVA), 16) ^ long('0x80000000', 16)))
 						else:
-							print("\t\t load by ordinal: %s" % (int(hex(fRVA), 16) ^ int('0x80000000', 16)))
+							print("\t\t load by ordinal: %s" % (long(hex(fRVA), 16) ^ long('0x80000000', 16)))
 					else:
 						try:
 							nindex = fRVA - self.sectionDict[self.importSymbolDict[item]['sectionID']]['virtualaddress']
@@ -705,13 +708,19 @@ class pefile:
 				if name.lower() == 'version':
 					rawData = self.resourceData[rootDir][-1][0]
 					length = rawData[0:2]
-					valueLength = struct.unpack('H', rawData[2:4])[0]
+					if len(rawData[2:4])!=2:
+						valueLength = 0
+					else:
+						valueLength = struct.unpack('H', rawData[2:4])[0]
 					type = rawData[4:6]
 					key = rawData[6:36] ### VS_VERSION_INFO (Unicode)
 					print("%s" % (key))
 					index = 36
-					while rawData[index] == '\x00':
+					while index < len(rawData) and rawData[index] == '\x00':
 						index += 1
+					if not index < len(rawData):
+						print('failed parsing resources, file seems truncated')
+						return
 					### Member
 					if valueLength>0:
 						memberSignature = rawData[index:index+4]
