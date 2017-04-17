@@ -358,9 +358,9 @@ class pefile:
                         break
                     if hex(fRVA).startswith('0x8000'):
                         if retVal:
-                            dllDict[currDLL].append("Ordinal: %s" % (int(hex(fRVA), 16) ^ int('0x80000000', 16)))
+                            dllDict[currDLL].append("Ordinal: %s" % (long(hex(fRVA), 16) ^ long('0x80000000', 16)))
                         else:
-                            print("\t\t load by ordinal: %s" % (int(hex(fRVA), 16) ^ int('0x80000000', 16)))
+                            print("\t\t load by ordinal: %s" % (long(hex(fRVA), 16) ^ long('0x80000000', 16)))
                     else:
                         try:
                             nindex = fRVA - self.sectionDict[self.exportSymbolDict[item]['sectionID']]['virtualaddress']
