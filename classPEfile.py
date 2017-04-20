@@ -402,6 +402,7 @@ class pefile:
         if resourceRVA != None:
             if self.sectionDict[i]['virtualaddress'] == resourceRVA:
                 self.resourceData = {}
+                """ Resource Tree Root Node """
                 #print "Size:", len(self.sectionDict[i]['data'])
                 rootDir_Characteristics = self.sectionDict[i]['data'][0:4]
                 rootDir_Timestamp = struct.unpack('I', self.sectionDict[i]['data'][4:8])[0]
@@ -413,7 +414,10 @@ class pefile:
                 index = 16
                 if rootDir_NumberOfNamedEntries>0:
                     counter = 0
-                    while counter < rootDir_NumberOfIdEntries:
+                    while counter < rootDir_NumberOfNamedEntries:
+                        result = self.recursiveReadTree(i, index, 8, spaces = 2)
+                        if result != None:
+                            self.resourceData[counter] = result
                         counter += 1
                         index += 8
                 if rootDir_NumberOfIdEntries>0:
@@ -422,10 +426,10 @@ class pefile:
                         result = self.recursiveReadTree(i, index, 8, spaces = 2)
                         if result != None:
                             self.resourceData[counter] = result
-                        #print
                         counter += 1
                         index += 8
         return self.sectionDict[i]['virtualaddress']+self.sectionDict[i]['virtualsize']
+
 
     def recursiveReadTree(self, i, offset, size, isDataEntry = False, spaces = 0, result = None):
             mes = ""
@@ -436,26 +440,13 @@ class pefile:
                 """ _IMAGE_RESOURCE_DIRECTORY_ENTRY """
                 name = struct.unpack('I', self.sectionDict[i]['data'][offset:offset+4])[0]
                 offsetToData = struct.unpack('H', self.sectionDict[i]['data'][offset+4:offset+6])[0]
-                type = struct.unpack('H', self.sectionDict[i]['data'][offset+6:offset+8])[0]
-                #mes = initMes
-                #try:
-                #   mes += "Name/ID: %s (%s)" % (name, self.resourceInformation[name])
-                #except KeyError as e:
-                #   mes += "Name/ID: %s (%s)" % (name, [self.sectionDict[i]['data'][offset:offset+4]])
-                #print(mes)
-                #mes = initMes
-                #mes += "OffsetToData: %s" % (offsetToData)
-                #print(mes)
-                #mes = initMes
-                #mes += "Type: %s" % (type)
-                #print(mes)
-                #mes = initMes
-                newData = [name, offsetToData, type]
+                dtype = struct.unpack('H', self.sectionDict[i]['data'][offset+6:offset+8])[0]
+                newData = [name, offsetToData, dtype]
                 if not result:
                     result = newData
                 else:
                     result.append(newData)
-                if type != 0:
+                if dtype != 0:
                     return self.recursiveReadTree(i, offsetToData, 16, spaces = spaces + 2, result = result)
                 else:
                     return self.recursiveReadTree(i, offsetToData, 16, isDataEntry = True, spaces = spaces + 2, result = result)
@@ -467,16 +458,6 @@ class pefile:
                 MinorVersion = self.sectionDict[i]['data'][offset+10:offset+12]
                 NumberOfNamedEntries = struct.unpack('H', self.sectionDict[i]['data'][offset+12:offset+14])[0]
                 NumberOfIdEntries = struct.unpack('H', self.sectionDict[i]['data'][offset+14:offset+16])[0]
-                #mes = initMes
-                #mes += "Timestamp: %s" % (Timestamp)
-                #print(mes)
-                #mes = initMes
-                #mes += "NumberOfNamedEntries: %s" % (NumberOfNamedEntries)
-                #print(mes)
-                #mes = initMes
-                #mes += "NumberOfIdEntries: %s" % (NumberOfIdEntries)
-                #print(mes)
-                #mes = initMes
                 counter = 0
                 newData = [Characteristics, Timestamp, MajorVersion, MinorVersion, NumberOfNamedEntries, NumberOfIdEntries]
                 result.append(newData)
@@ -488,27 +469,16 @@ class pefile:
                 Size = self.sectionDict[i]['data'][offset+4:offset+8]
                 CodePage = self.sectionDict[i]['data'][offset+8:offset+12]
                 Reserved = self.sectionDict[i]['data'][offset+12:offset+16]
-                #mes = initMes
-                #mes += "Next Offset: %s (%s)" % (OffsetToData.encode('hex'), self.sectionDict[i]['virtualaddress'])
-                #print(mes)
-                #mes = initMes
-                #mes += "Size: %s (%s)" % ([Size], struct.unpack('I', Size)[0])
-                #print(mes)
-                #mes = initMes
-                #mes += "CodePage: %s" % (CodePage.encode('hex'))
-                #print(mes)
-                #mes = initMes
-                #mes += "Reserved: %s" % (Reserved.encode('hex'))
-                #print(mes)
-                #mes = initMes
                 newData = [OffsetToData, Size, CodePage, Reserved]
                 result.append(newData)
-                return self.recursiveReadTree(i, struct.unpack('I', OffsetToData)[0], struct.unpack('I', Size)[0], isDataEntry = True, spaces = spaces + 2, result = result)
+                if len(OffsetToData)==4:
+                    newOffset = struct.unpack('I', OffsetToData)[0]
+                    newSize = struct.unpack('I', Size)[0]
+                    return self.recursiveReadTree(i, struct.unpack('I', OffsetToData)[0], struct.unpack('I', Size)[0], isDataEntry = True, spaces = spaces + 2, result = result)
+                return result
             elif isDataEntry:
-                #print offset, offset-self.sectionDict[i]['virtualaddress']
                 rva = offset-self.sectionDict[i]['virtualaddress']
                 resourceData = self.sectionDict[i]['data'][rva:rva+size]
-                #print [resourceData]
                 result.append([resourceData])
                 return result
             return result
@@ -755,78 +725,84 @@ class pefile:
                     name = self.resourceInformation[nameID]
                 except:
                     name = str(nameID)
+                print("  Resource Name: %s" % (name))
                 if name.lower() == 'version':
                     rawData = self.resourceData[rootDir][-1][0]
                     length = rawData[0:2]
+                    #print [rawData]
+                    #print length
                     if len(rawData[2:4])!=2:
                         valueLength = 0
                     else:
-                        valueLength = struct.unpack('H', rawData[2:4])[0]
+                        try:
+                            valueLength = struct.unpack('H', rawData[2:4])[0]
+                        except:
+                            valueLength = 0
                     type = rawData[4:6]
                     key = rawData[6:36] ### VS_VERSION_INFO (Unicode)
-                    print("%s" % (key))
+                    print("    %s" % (key))
                     index = 36
                     while index < len(rawData) and rawData[index] == '\x00':
                         index += 1
                     if not index < len(rawData):
-                        print('failed parsing resources, file seems truncated')
-                        return
+                        #print('failed parsing resources, file seems truncated')
+                        continue
                     ### Member
                     if valueLength>0:
                         memberSignature = rawData[index:index+4]
                         if memberSignature == '\xbd\x04\xef\xfe': # VS_FIXEDFILEINFO
                             dwStrucVersion = rawData[index+4:index+8]
-                            print("structure version: %s.%s" % (struct.unpack('H', dwStrucVersion[2:4])[0], struct.unpack('H', dwStrucVersion[0:2])[0]))
+                            print("    structure version: %s.%s" % (struct.unpack('H', dwStrucVersion[2:4])[0], struct.unpack('H', dwStrucVersion[0:2])[0]))
                             dwFileVersionMS = rawData[index+8:index+12]
                             dwFileVersionLS = rawData[index+12:index+16]
-                            print("file version: %s.%s" % (struct.unpack('I', dwFileVersionLS)[0], struct.unpack('I', dwFileVersionMS)[0]))
+                            print("    file version: %s.%s" % (struct.unpack('I', dwFileVersionLS)[0], struct.unpack('I', dwFileVersionMS)[0]))
                             dwProductVersionMS = rawData[index+16:index+20]
                             dwProductVersionLS = rawData[index+20:index+24]
-                            print("product version: %s.%s" % (struct.unpack('I', dwProductVersionLS)[0], struct.unpack('I', dwProductVersionMS)[0]))
+                            print("    product version: %s.%s" % (struct.unpack('I', dwProductVersionLS)[0], struct.unpack('I', dwProductVersionMS)[0]))
                             dwFileFlagsMask = rawData[index+24:index+28]
-                            print("file flags mask: %s" % ([dwFileFlagsMask]))
+                            print("    file flags mask: %s" % ([dwFileFlagsMask]))
                             dwFileFlags = rawData[index+28:index+32]
-                            print("file flags: %s" % ([dwFileFlags]))
+                            print("    file flags: %s" % ([dwFileFlags]))
                             dwFileOS = rawData[index+32:index+36]
-                            print("designed for:")
+                            print("    designed for:")
                             if dwFileOS == '\x04\x00\x00\x00':
-                                print("\t VOS__WINDOWS32")
+                                print("\t\t VOS__WINDOWS32")
                             else:
-                                print('\t VOS_UNKNOWN (%s)' % ([dwFileOS]))
+                                print('\t\t VOS_UNKNOWN (%s)' % ([dwFileOS]))
                             dwFileType = rawData[index+36:index+40]
-                            print("file type:")
+                            print("    file type:")
                             if dwFileType == '\x01\x00\x00\x00':
-                                print("\t VFT_APP")
+                                print("\t\t VFT_APP")
                             else:
-                                print("\t VFT_UNKNOWN (%s)" % ([dwFileType]))
+                                print("\t\t VFT_UNKNOWN (%s)" % ([dwFileType]))
                             dwFileSubtype = rawData[index+40:index+44]
                             #print [dwFileSubtype]
                             #dwFileDateMS = struct.unpack('I', rawData[index+44:index+48])[0]
                             dwFileDateMS = rawData[index+44:index+48]
-                            print("Creation Date (MS): %s" % ([dwFileDateMS]))
+                            print("    Creation Date (MS): %s" % ([dwFileDateMS]))
                             dwFileDateLS = rawData[index+48:index+52]
-                            print("Creation Date (LS): %s" % ([dwFileDateLS]))
+                            print("    Creation Date (LS): %s" % ([dwFileDateLS]))
                             index = index + 52
                         else:
-                            print("wrong member signature: %s" % ([memberSignature]))
+                            print("    wrong member signature: %s" % ([memberSignature]))
                     while rawData[index] == '\x00':
                         index += 1
                     ### Children
                     length = rawData[index:index+2]
-                    print("child length: %s" % (struct.unpack('H', length)[0]))
+                    print("    child length: %s" % (struct.unpack('H', length)[0]))
                     valueLength = rawData[index+2:index+4]
-                    print("value length %s (should be zero)" % (struct.unpack('H', valueLength)[0]))
+                    print("    value length %s (should be zero)" % (struct.unpack('H', valueLength)[0]))
                     type = rawData[index+4:index+6]
                     stringFileInfoBlock = rawData[index+6:index+6+struct.unpack('H', length)[0]]
                     varFileInfoBlock = rawData[index+6+struct.unpack('H', length)[0]:]
                     if stringFileInfoBlock.startswith('S'):
                         #key = rawData[index+6:index+34]
                         key = stringFileInfoBlock[0:28]
-                        print("%s" % (key))
+                        print("    %s" % (key))
                         self.stringTable(stringFileInfoBlock[28:])
                     if varFileInfoBlock.startswith('V'):
                         key = varFileInfoBlock[0:24]
-                        print("%s" % (key))
+                        print("    %s" % (key))
                         self.analyseVarFileInfo(varFileInfoBlock[24:])
         else:
             print("no resource information found")
@@ -844,6 +820,8 @@ class pefile:
         print('  language:')
         if szKey[0:8] == '0\x008\x000\x009\x00':
             print('\t u.k. english')
+        elif szKey[0:8] == '0\x004\x001\x009\x00':
+            print('\t russian')
         else:
             print("  %s" % ([szKey[0:8]]))
         print('  character set:')
@@ -880,13 +858,13 @@ class pefile:
                 if index >= len(entry):
                     break
         value = ""
-        if wValueLength > 0:
+        if wValueLength > 1:
             try:
                 while entry[index] != '\x00' or entry[index+1] != '\x00':
                     value += entry[index]
                     index += 1
             except IndexError as e:
-                pass
+                value = ""
         #print("    %s" % (value))
         print("  %s: %s" % (unicodeString, value ))
         if len(entry[index:])>10:
