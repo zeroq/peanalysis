@@ -412,22 +412,12 @@ class pefile:
                 rootDir_NumberOfNamedEntries = struct.unpack('H', self.sectionDict[i]['data'][12:14])[0]
                 rootDir_NumberOfIdEntries = struct.unpack('H', self.sectionDict[i]['data'][14:16])[0]
                 index = 16
-                if rootDir_NumberOfNamedEntries>0:
-                    counter = 0
-                    while counter < rootDir_NumberOfNamedEntries:
-                        result = self.recursiveReadTree(i, index, 8, spaces = 2)
-                        if result != None:
-                            self.resourceData[counter] = result
-                        counter += 1
-                        index += 8
-                if rootDir_NumberOfIdEntries>0:
-                    counter = 0
-                    while counter < rootDir_NumberOfIdEntries:
-                        result = self.recursiveReadTree(i, index, 8, spaces = 2)
-                        if result != None:
-                            self.resourceData[counter] = result
-                        counter += 1
-                        index += 8
+                number_of_entries = rootDir_NumberOfNamedEntries + rootDir_NumberOfIdEntries
+                for counter in range(0, number_of_entries):
+                    result = self.recursiveReadTree(i, index, 8, spaces = 2)
+                    if result != None:
+                        self.resourceData[counter] = result
+                    index += 8
         return self.sectionDict[i]['virtualaddress']+self.sectionDict[i]['virtualsize']
 
 
