@@ -2,7 +2,7 @@
 # coding: utf-8
 
 """
-classPEfile.py - v0.1 - 2014.04.10
+classPEfile.py - v0.2 - 2019.12.26
 
 Author : Jan Goebel - goebel@pi-one.net
 Licence : GPL v2
@@ -13,15 +13,17 @@ Licence : GPL v2
 ############################################################################
 
 __author__ = "jan goebel (goebel@pi-one.net)"
-__version__ = "0.1"
+__version__ = "0.2"
 
 ############################################################################
 # Imports
 ############################################################################
 
 import sys
+PY3 = sys.version_info[0] == 3
 import struct
 import time
+from binascii import hexlify, unhexlify
 
 ############################################################################
 
@@ -98,6 +100,8 @@ class pefile:
         except:
             print("no PE file!")
         else:
+            if type(PESignature) == type(bytes()):
+                PESignature = PESignature.decode('ascii')
             if PESignature == '\x50\x45\x00\x00':
                 self.peHeader = self.filecontent[self.msdosDict['15_pPEHeader']+4:self.msdosDict['15_pPEHeader']+4+20]
                 self.peDict = {}
@@ -117,6 +121,8 @@ class pefile:
                     self.secionDataDict[i] = self.filecontent[self.sectionDict[i]['ptorawdata']:self.sectionDict[i]['ptorawdata']+self.sectionDict[i]['sizeofrawdata']]
                     beginFirstSection += 40
                     endFirstSection += 40
+            else:
+                print("PE Signature wrong: %s" % PESignature)
         if not self.peHeader:
             print("PE Header is None")
             self.isPEfile = False
@@ -179,9 +185,12 @@ class pefile:
                             index = int(Name - self.sectionDict[lastSecId]['virtualaddress'])
                             nameVal = ""
                             while True:
-                                if self.secionDataDict[lastSecId][index]=='\x00':
+                                if self.secionDataDict[lastSecId][index]=='\x00' or self.secionDataDict[lastSecId][index]==0:
                                     break
-                                nameVal += struct.unpack('c', self.secionDataDict[lastSecId][index])[0]
+                                try:
+                                    nameVal += struct.unpack('c', bytes([self.secionDataDict[lastSecId][index]]))[0].decode('ascii', 'replace')
+                                except:
+                                    nameVal += struct.unpack('c', self.secionDataDict[lastSecId][index])[0]
                                 index += 1
                             self.exportSymbolDict[counter]['NameDLL'] = nameVal
                         except:
@@ -231,12 +240,16 @@ class pefile:
                             index = int(Name - self.sectionDict[lastSecId]['virtualaddress'])
                             nameVal = ""
                             while True:
-                                if self.secionDataDict[lastSecId][index]=='\x00':
+                                if self.secionDataDict[lastSecId][index]=='\x00' or self.secionDataDict[lastSecId][index]==0:
                                     break
-                                nameVal += struct.unpack('c', self.secionDataDict[lastSecId][index])[0]
+                                try: # Python3
+                                    nameVal += struct.unpack('c', bytes([self.secionDataDict[lastSecId][index]]))[0].decode('ascii', 'replace')
+                                except:
+                                    nameVal += struct.unpack('c', self.secionDataDict[lastSecId][index])[0]
                                 index += 1
                             self.importSymbolDict[counter]['NameDLL'] = nameVal
-                        except:
+                        except Exception as e:
+                            print(e)
                             self.importSymbolDict[counter]['NameDLL'] = 'Unknown'
                     else:
                         self.importSymbolDict[counter]['NameDLL'] = 'Unknown'
@@ -255,7 +268,7 @@ class pefile:
             currDLL = ""
         else:
             print
-            print "Imported Functions:"
+            print("Imported Functions:")
             print
 
         if self.is32bit:
@@ -285,9 +298,15 @@ class pefile:
                         break
                     if hex(fRVA).startswith('0x8000'):
                         if retVal:
-                            dllDict[currDLL].append("Ordinal: %s" % (long(hex(fRVA), 16) ^ long('0x80000000', 16)))
+                            if PY3:
+                                dllDict[currDLL].append("Ordinal: %s" % (int(hex(fRVA), 16) ^ int('0x80000000', 16)))
+                            else:
+                                dllDict[currDLL].append("Ordinal: %s" % (long(hex(fRVA), 16) ^ long('0x80000000', 16)))
                         else:
-                            print("\t\t load by ordinal: %s" % (long(hex(fRVA), 16) ^ long('0x80000000', 16)))
+                            if PY3:
+                                print("\t\t load by ordinal: %s" % (int(hex(fRVA), 16) ^ int('0x80000000', 16)))
+                            else:
+                                print("\t\t load by ordinal: %s" % (long(hex(fRVA), 16) ^ long('0x80000000', 16)))
                     else:
                         try:
                             nindex = fRVA - self.sectionDict[self.importSymbolDict[item]['sectionID']]['virtualaddress']
@@ -295,9 +314,12 @@ class pefile:
                             funcName = ""
                             nindex += 2
                             while True:
-                                if self.secionDataDict[self.importSymbolDict[item]['sectionID']][nindex]=='\x00':
+                                if self.secionDataDict[self.importSymbolDict[item]['sectionID']][nindex]=='\x00' or self.secionDataDict[self.importSymbolDict[item]['sectionID']][nindex]==0:
                                     break
-                                funcName += struct.unpack('c', self.secionDataDict[self.importSymbolDict[item]['sectionID']][nindex])[0]
+                                try:
+                                    funcName += struct.unpack('c', bytes([self.secionDataDict[self.importSymbolDict[item]['sectionID']][nindex]]))[0].decode('ascii', 'replace')
+                                except:
+                                    funcName += struct.unpack('c', self.secionDataDict[self.importSymbolDict[item]['sectionID']][nindex])[0]
                                 nindex += 1
                             if retVal:
                                 dllDict[currDLL].append(funcName)
@@ -333,7 +355,7 @@ class pefile:
             currDLL = ""
         else:
             print
-            print "Exported Functions:"
+            print("Exported Functions:")
             print
 
         for item in self.exportSymbolDict:
@@ -358,18 +380,27 @@ class pefile:
                         break
                     if hex(fRVA).startswith('0x8000'):
                         if retVal:
-                            dllDict[currDLL].append("Ordinal: %s" % (long(hex(fRVA), 16) ^ long('0x80000000', 16)))
+                            if PY3:
+                                dllDict[currDLL].append("Ordinal: %s" % (int(hex(fRVA), 16) ^ int('0x80000000', 16)))
+                            else:
+                                dllDict[currDLL].append("Ordinal: %s" % (long(hex(fRVA), 16) ^ long('0x80000000', 16)))
                         else:
-                            print("\t\t load by ordinal: %s" % (long(hex(fRVA), 16) ^ long('0x80000000', 16)))
+                            if PY3:
+                                print("\t\t load by ordinal: %s" % (int(hex(fRVA), 16) ^ int('0x80000000', 16)))
+                            else:
+                                print("\t\t load by ordinal: %s" % (long(hex(fRVA), 16) ^ long('0x80000000', 16)))
                     else:
                         try:
                             nindex = fRVA - self.sectionDict[self.exportSymbolDict[item]['sectionID']]['virtualaddress']
                             hint = struct.unpack('H', self.secionDataDict[self.exportSymbolDict[item]['sectionID']][nindex:nindex+2])[0]
                             funcName = ""
                             while True:
-                                if self.secionDataDict[self.exportSymbolDict[item]['sectionID']][nindex]=='\x00':
+                                if self.secionDataDict[self.exportSymbolDict[item]['sectionID']][nindex]=='\x00' or self.secionDataDict[self.exportSymbolDict[item]['sectionID']][nindex]==0:
                                     break
-                                funcName += struct.unpack('c', self.secionDataDict[self.exportSymbolDict[item]['sectionID']][nindex])[0]
+                                try:
+                                    funcName += struct.unpack('c', bytes([self.secionDataDict[self.exportSymbolDict[item]['sectionID']][nindex]]))[0].decode('ascii', 'replace')
+                                except:
+                                    funcName += struct.unpack('c', self.secionDataDict[self.exportSymbolDict[item]['sectionID']][nindex])[0]
                                 nindex += 1
                             if retVal:
                                 dllDict[currDLL].append(funcName)
@@ -385,7 +416,7 @@ class pefile:
 
     def readSectionHeader(self, sectionHeader, i, resourceRVA=None):
         self.sectionDict[i] = {}
-        self.sectionDict[i]['name'] = "".join(struct.unpack('8c', sectionHeader[0:8]))
+        self.sectionDict[i]['name'] = b"".join(struct.unpack('8c', sectionHeader[0:8])).decode('ascii')
         self.sectionDict[i]['misc'] = struct.unpack('I', sectionHeader[8:12])[0]
         self.sectionDict[i]['physaddress'] = struct.unpack('I', sectionHeader[8:12])[0]
         self.sectionDict[i]['virtualsize'] = struct.unpack('I', sectionHeader[8:12])[0]
@@ -476,8 +507,12 @@ class pefile:
     def fillOptHeaderFields(self, peOptionalHeader):
         last_index = 96
         if self.is32bit:
-            self.peoptDict['02_majorlnkv'] = struct.unpack('b', peOptionalHeader[2])[0]
-            self.peoptDict['03_minorlnkv'] = struct.unpack('b', peOptionalHeader[3])[0]
+            try: # Python3
+                self.peoptDict['02_majorlnkv'] = struct.unpack('b', bytes([peOptionalHeader[2]]))[0]
+                self.peoptDict['03_minorlnkv'] = struct.unpack('b', bytes([peOptionalHeader[3]]))[0]
+            except: # Python2
+                self.peoptDict['02_majorlnkv'] = struct.unpack('b', peOptionalHeader[2])[0]
+                self.peoptDict['03_minorlnkv'] = struct.unpack('b', peOptionalHeader[3])[0]
             self.peoptDict['04_codesize'] = struct.unpack('i', peOptionalHeader[4:8])[0]
             self.peoptDict['05_initsize'] = struct.unpack('i', peOptionalHeader[8:12])[0]
             self.peoptDict['06_uninitsize'] = struct.unpack('i', peOptionalHeader[12:16])[0]
@@ -508,8 +543,12 @@ class pefile:
             return last_index
         else:
             # 64bit binary
-            self.peoptDict['02_majorlnkv'] = struct.unpack('b', peOptionalHeader[2])[0]
-            self.peoptDict['03_minorlnkv'] = struct.unpack('b', peOptionalHeader[3])[0]
+            try: # Python3
+                self.peoptDict['02_majorlnkv'] = struct.unpack('b', bytes([peOptionalHeader[2]]))[0]
+                self.peoptDict['03_minorlnkv'] = struct.unpack('b', bytes([peOptionalHeader[3]]))[0]
+            except: # Python2
+                self.peoptDict['02_majorlnkv'] = struct.unpack('b', peOptionalHeader[2])[0]
+                self.peoptDict['03_minorlnkv'] = struct.unpack('b', peOptionalHeader[3])[0]
             self.peoptDict['04_codesize'] = struct.unpack('i', peOptionalHeader[4:8])[0]
             self.peoptDict['05_initsize'] = struct.unpack('i', peOptionalHeader[8:12])[0]
             self.peoptDict['06_uninitsize'] = struct.unpack('i', peOptionalHeader[12:16])[0]
@@ -541,13 +580,16 @@ class pefile:
             return last_index
 
     def readPEOptHeader(self, peOptionalHeader):
-        self.peoptDict['01_optionalHeaderMagic'] = peOptionalHeader[0:2]
+        self.peoptDict['01_optionalHeaderMagic'] = peOptionalHeader[0:2].decode('ascii')
         if self.peoptDict['01_optionalHeaderMagic']=='\x0b\x01':
             self.peoptDict['01_optionalHeaderMagic']='PE32'
             self.is32bit = True
         elif self.peoptDict['01_optionalHeaderMagic']=='\x0b\x02':
             self.peoptDict['01_optionalHeaderMagic']='PE32+'
             self.is32bit = False # 64bit binary
+        else:
+            print('Missing optional header magic!')
+            sys.exit(1)
 
         last_index = self.fillOptHeaderFields(peOptionalHeader)
         self.peoptDict['31_imageDataDirectory'] = {}
@@ -572,9 +614,15 @@ class pefile:
         return resourceRVA
 
     def readPEHeader(self, peHeader):
-        self.peDict['01_machine'] = peHeader[0:2].encode('hex')
+        self.peDict['01_machine'] = hexlify(peHeader[0:2]).decode('ascii')
         if self.peDict['01_machine'] == '4c01':
-            self.peDict['01_machine'] = "i386"
+            self.peDict['01_machine'] = "i386 32Bit (0x014c)"
+        elif self.peDict['01_machine'] == '6486':
+            self.peDict['01_machine'] = "i386 64Bit (0x8664)"
+        else:
+            print('No machine type found!')
+            sys.exit(1)
+
         self.peDict['02_numberofsections'] = struct.unpack('h', peHeader[2:4])[0]
         self.peDict['03_timedatestamp'] = struct.unpack('i', peHeader[4:8])[0]
         self.peDict['04_pSymbolTable'] = struct.unpack('I', peHeader[8:12])[0]
@@ -730,9 +778,12 @@ class pefile:
                             valueLength = 0
                     type = rawData[4:6]
                     key = rawData[6:36] ### VS_VERSION_INFO (Unicode)
-                    print("    %s" % (key))
+                    try:
+                        print("    %s" % (key.decode('ascii', 'replace')))
+                    except:
+                        print("    %s" % (key))
                     index = 36
-                    while index < len(rawData) and rawData[index] == '\x00':
+                    while index < len(rawData) and (rawData[index] == '\x00' or rawData[index] == 0):
                         index += 1
                     if not index < len(rawData):
                         #print('failed parsing resources, file seems truncated')
@@ -740,7 +791,7 @@ class pefile:
                     ### Member
                     if valueLength>0:
                         memberSignature = rawData[index:index+4]
-                        if memberSignature == '\xbd\x04\xef\xfe': # VS_FIXEDFILEINFO
+                        if memberSignature == '\xbd\x04\xef\xfe' or memberSignature == b'\xbd\x04\xef\xfe': # VS_FIXEDFILEINFO
                             dwStrucVersion = rawData[index+4:index+8]
                             print("    structure version: %s.%s" % (struct.unpack('H', dwStrucVersion[2:4])[0], struct.unpack('H', dwStrucVersion[0:2])[0]))
                             dwFileVersionMS = rawData[index+8:index+12]
@@ -755,13 +806,13 @@ class pefile:
                             print("    file flags: %s" % ([dwFileFlags]))
                             dwFileOS = rawData[index+32:index+36]
                             print("    designed for:")
-                            if dwFileOS == '\x04\x00\x00\x00':
+                            if dwFileOS == '\x04\x00\x00\x00' or dwFileOS == b'\x04\x00\x00\x00':
                                 print("\t\t VOS__WINDOWS32")
                             else:
                                 print('\t\t VOS_UNKNOWN (%s)' % ([dwFileOS]))
                             dwFileType = rawData[index+36:index+40]
                             print("    file type:")
-                            if dwFileType == '\x01\x00\x00\x00':
+                            if dwFileType == '\x01\x00\x00\x00' or dwFileType == b'\x01\x00\x00\x00':
                                 print("\t\t VFT_APP")
                             else:
                                 print("\t\t VFT_UNKNOWN (%s)" % ([dwFileType]))
@@ -775,7 +826,7 @@ class pefile:
                             index = index + 52
                         else:
                             print("    wrong member signature: %s" % ([memberSignature]))
-                    while rawData[index] == '\x00':
+                    while rawData[index] == '\x00' or rawData[index] == 0:
                         index += 1
                     ### Children
                     length = rawData[index:index+2]
@@ -783,15 +834,21 @@ class pefile:
                     valueLength = rawData[index+2:index+4]
                     print("    value length %s (should be zero)" % (struct.unpack('H', valueLength)[0]))
                     type = rawData[index+4:index+6]
+                    #try:
+                    #    stringFileInfoBlock = rawData[index+6:index+6+struct.unpack('H', length)[0]].decode('ascii', 'replace')
+                    #except:
                     stringFileInfoBlock = rawData[index+6:index+6+struct.unpack('H', length)[0]]
                     varFileInfoBlock = rawData[index+6+struct.unpack('H', length)[0]:]
-                    if stringFileInfoBlock.startswith('S'):
+                    if stringFileInfoBlock.startswith(b'S'):
                         #key = rawData[index+6:index+34]
                         key = stringFileInfoBlock[0:28]
-                        print("    %s" % (key))
+                        try:
+                            print("    %s" % (key.decode('ascii', 'replace')))
+                        except:
+                            print("    %s" % (key))
                         self.stringTable(stringFileInfoBlock[28:])
-                    if varFileInfoBlock.startswith('V'):
-                        key = varFileInfoBlock[0:24]
+                    if varFileInfoBlock.startswith(b'V'):
+                        key = varFileInfoBlock[0:24].decode('ascii', 'replace')
                         print("    %s" % (key))
                         self.analyseVarFileInfo(varFileInfoBlock[24:])
         else:
@@ -800,10 +857,10 @@ class pefile:
     def stringTable(self, datablock):
         index = 0
         ### skip padding
-        while datablock[index] == '\x00':
+        while datablock[index] == '\x00' or datablock[index] == 0:
             index += 1
         wLength = datablock[index:index+2]
-        print("  string table length: %s" % (struct.unpack('H', wLength)[0]))
+        print("  string table length: %i" % (struct.unpack('H', wLength)[0]))
         wValueLength = datablock[index+2:index+4]
         wType = datablock[index+4:index+6]
         szKey = datablock[index+6:index+22]
@@ -815,7 +872,7 @@ class pefile:
         else:
             print("  %s" % ([szKey[0:8]]))
         print('  character set:')
-        if szKey[8:] == '0\x004\x00B\x000\x00' or szKey[8:] == '0\x004\x00b\x000\x00':
+        if szKey[8:] == '0\x004\x00B\x000\x00' or szKey[8:] == '0\x004\x00b\x000\x00' or szKey[8:] == b'0\x004\x00B\x000\x00' or szKey[8:] == b'0\x004\x00b\x000\x00':
             print("\t unicode")
         else:
             print("  %s" % ([szKey[8:]]))
@@ -824,7 +881,7 @@ class pefile:
     def childString(self, entry):
         index = 0
         ### skip padding
-        while entry[index] == '\x00':
+        while entry[index] == '\x00' or entry[index] == 0:
             index += 1
         wLength = entry[index:index+2]
         #print("    string entry length: %s" % (struct.unpack('H', wLength)[0]))
@@ -834,8 +891,11 @@ class pefile:
         #print("wType: %s" % ([wType]))
         unicodeString = ""
         position = index + 6
-        while entry[position] != '\x00' or (position+1 < len(entry) and entry[position+1] != '\x00'):
-            unicodeString += entry[position]
+        while (entry[position] != '\x00' and entry[position] != 0) or (position+1 < len(entry) and (entry[position+1] != '\x00' and entry[position+1] != 0)):
+            char = entry[position]
+            if type(char) == int:
+                char = bytes([char]).decode('ascii', 'replace')
+            unicodeString += char
             position += 1
             if position >= len(entry):
                 break
@@ -843,26 +903,36 @@ class pefile:
         index = position
         ### skip padding
         if index < len(entry):
-            while entry[index] == '\x00':
+            while entry[index] == '\x00' or entry[index] == 0:
                 index += 1
                 if index >= len(entry):
                     break
         value = ""
         if wValueLength > 1:
             try:
-                while entry[index] != '\x00' or entry[index+1] != '\x00':
-                    value += entry[index]
+                while (entry[index] != '\x00' and entry[index] != 0) or (entry[index+1] != '\x00' and entry[index+1] != 0):
+                    char = entry[index]
+                    if type(char) == int:
+                        char = bytes([char]).decode('ascii', 'replace')
+                    value += char
                     index += 1
             except IndexError as e:
-                value = ""
+                #print(e)
+                if len(value)>1:
+                    pass
+                else:
+                    value = b""
         #print("    %s" % (value))
-        print("  %s: %s" % (unicodeString, value ))
+        try:
+            print("  %s: %s" % (unicodeString.decode('ascii', 'replace'), value.decode('ascii', 'replace') ))
+        except:
+            print("  %s: %s" % (unicodeString, value ))
         if len(entry[index:])>10:
             self.childString(entry[index:])
         return
 
     def analyseVarFileInfo(self, datablock):
-        print [datablock]
+        print([datablock])
         pass
 
 
